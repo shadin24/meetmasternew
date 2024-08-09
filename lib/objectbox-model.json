@@ -1,0 +1,79 @@
+{
+  "_note1": "KEEP THIS FILE! Check it into a version control system (VCS) like git.",
+  "_note2": "ObjectBox manages crucial IDs for your object model. See docs for details.",
+  "_note3": "If you have VCS merge conflicts, you must resolve them according to ObjectBox docs.",
+  "entities": [
+    {
+      "id": "1:5329076584521845904",
+      "lastPropertyId": "11:7485288842403939975",
+      "name": "Meeting",
+      "properties": [
+        {
+          "id": "1:7255199131252079177",
+          "name": "id",
+          "type": 6,
+          "flags": 1
+        },
+        {
+          "id": "2:6849898146209921340",
+          "name": "subject",
+          "type": 9
+        },
+        {
+          "id": "3:6643109235732404290",
+          "name": "meetingId",
+          "type": 9
+        },
+        {
+          "id": "4:3001951955839611031",
+          "name": "location",
+          "type": 9
+        },
+        {
+          "id": "5:6728044051646973748",
+          "name": "date",
+          "type": 9
+        },
+        {
+          "id": "6:6312732186067315688",
+          "name": "time",
+          "type": 9
+        },
+        {
+          "id": "7:5024634989496761207",
+          "name": "category",
+          "type": 9
+        },
+        {
+          "id": "8:7404951407635889383",
+          "name": "participantsCount",
+          "type": 6
+        },
+        {
+          "id": "9:8963886658065457979",
+          "name": "agenda",
+          "type": 9
+        },
+        {
+          "id": "11:7485288842403939975",
+          "name": "participantsSerialized",
+          "type": 9
+        }
+      ],
+      "relations": []
+    }
+  ],
+  "lastEntityId": "1:5329076584521845904",
+  "lastIndexId": "0:0",
+  "lastRelationId": "0:0",
+  "lastSequenceId": "0:0",
+  "modelVersion": 5,
+  "modelVersionParserMinimum": 5,
+  "retiredEntityUids": [],
+  "retiredIndexUids": [],
+  "retiredPropertyUids": [
+    2845364285306612577
+  ],
+  "retiredRelationUids": [],
+  "version": 1
+}

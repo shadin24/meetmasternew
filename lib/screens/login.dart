@@ -3,6 +3,7 @@ import 'package:signup/animation/animated_content.dart';
 import 'package:signup/common/widgets/common_button.dart';
 import 'package:signup/screens/home/profile_screen.dart';
 import 'package:signup/screens/sign_up_screen.dart';
+import 'package:signup/services/auth_service.dart';
 import 'package:signup/theme/theme.dart';
 import 'package:signup/util/utils.dart';
 
@@ -18,6 +19,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passController = TextEditingController();
   bool _showPassword = false;
+  bool _submitting = false;
   final _formKey = GlobalKey<FormState>();
 
   @override
@@ -25,6 +27,35 @@ class _LoginScreenState extends State<LoginScreen> {
     _emailController.dispose();
     _passController.dispose();
     super.dispose();
+  }
+
+  Future<void> _logIn() async {
+    if (!_formKey.currentState!.validate() || _submitting) {
+      return;
+    }
+    _formKey.currentState!.save();
+    setState(() => _submitting = true);
+
+    final email = _emailController.text.trim();
+    try {
+      final auth = await AuthService.create();
+      final result = await auth.login(email, _passController.text);
+      if (!mounted) return;
+      if (result != AuthResult.success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Incorrect email or password')),
+        );
+        return;
+      }
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => ProfileScreen(email: email),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _submitting = false);
+    }
   }
 
   @override
@@ -74,6 +105,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           if (!Utils.isValidEmail(value)) {
                             return 'Enter Valid Email';
                           }
+                          return null;
                         },
                         controller: _emailController,
                         style: const TextStyle(
@@ -128,9 +160,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       topToBottom: 3.0,
                       time: 1400,
                       child: TextFormField(
-                        validator: (value) => value!.length < 6
-                            ? "Enter valid 6 digit Password"
-                            : null,
+                        validator: (value) =>
+                            value == null || value.isEmpty ? "Enter Password" : null,
                         controller: _passController,
                         obscureText: !_showPassword,
                         style: const TextStyle(
@@ -197,18 +228,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       child: CommonButton(
                         height: 50,
                         width: double.infinity,
-                        label: 'Log In',
-                        onPressed: () {
-                          if (_formKey.currentState!.validate()) {
-                            _formKey.currentState!.save();
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => ProfileScreen(email: _emailController.text),
-                              ),
-                            );
-                          }
-                        },
+                        label: _submitting ? 'Logging in...' : 'Log In',
+                        onPressed: _submitting ? null : _logIn,
                       ),
                     ),
                     const SizedBox(

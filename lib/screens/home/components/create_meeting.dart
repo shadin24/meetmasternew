@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:objectbox/objectbox.dart';
+import 'package:signup/services/object_box.dart';
 import 'package:signup/theme/theme.dart';
 import 'package:signup/Meeting.dart';
-import 'package:signup/objectbox.g.dart'; // Import the generated code
 
 class CreateMeetingPage extends StatefulWidget {
   @override
@@ -25,7 +25,6 @@ class _CreateMeetingPageState extends State<CreateMeetingPage> {
   List<TextEditingController> _participantControllers = [];
   int _participantCount = 1;
 
-  late final Store store;
   late final Box<Meeting> meetingBox;
 
   @override
@@ -35,15 +34,8 @@ class _CreateMeetingPageState extends State<CreateMeetingPage> {
     _initStore(); // Initialize ObjectBox
   }
 
-  @override
-  void dispose() {
-    store.close();
-    super.dispose();
-  }
-
   Future<void> _initStore() async {
-    store = await openStore();
-    meetingBox = store.box<Meeting>();
+    meetingBox = (await ObjectBox.instance()).meetingBox;
   }
 
   void _addParticipantField() {

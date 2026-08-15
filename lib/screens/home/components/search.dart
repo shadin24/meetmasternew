@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart'; // For date formatting
 import 'package:signup/objectbox.g.dart'; // Import the generated ObjectBox code
+import 'package:signup/services/object_box.dart';
 import 'package:signup/theme/theme.dart';
 import '../../../Meeting.dart'; // Adjust the import according to your project structure
 
@@ -14,7 +15,6 @@ class _SearchMeetingPageState extends State<SearchMeetingPage> {
   final _dateController = TextEditingController();
   DateTime? _selectedDate;
 
-  late final Store _store;
   late final Box<Meeting> _meetingBox;
   List<Meeting> _searchResults = []; // State variable for search results
 
@@ -25,14 +25,7 @@ class _SearchMeetingPageState extends State<SearchMeetingPage> {
   }
 
   Future<void> _initStore() async {
-    _store = await openStore();
-    _meetingBox = _store.box<Meeting>();
-  }
-
-  @override
-  void dispose() {
-    _store.close();
-    super.dispose();
+    _meetingBox = (await ObjectBox.instance()).meetingBox;
   }
 
   @override
@@ -146,28 +139,17 @@ class _SearchMeetingPageState extends State<SearchMeetingPage> {
     if (_searchFormKey.currentState?.validate() ?? false) {
       final dateStr = _dateController.text;
       if (dateStr.isNotEmpty) {
-        // Compare only the date part by using equals
-        final searchDate = dateStr;  // Keep the date part only
-
-        // Debugging output
-        print('Searching for meetings on: $searchDate');
-
         // Query the database for meetings with the exact date
         final query = _meetingBox.query(
-          Meeting_.date.equals(searchDate),
+          Meeting_.date.equals(dateStr),
         ).build();
 
         final meetings = query.find();
-
-        print('Found ${meetings.length} meetings'); // Log the number of found meetings
+        query.close();
 
         setState(() {
           _searchResults = meetings;
         });
-
-        if (_searchResults.isEmpty) {
-          print('No meetings found for the selected date.');
-        }
       }
     }
   }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart'; // For date formatting
 import 'package:signup/objectbox.g.dart'; // Import the generated code
+import 'package:signup/services/object_box.dart';
 import 'package:signup/theme/theme.dart';
 import '../../../Meeting.dart'; // Adjust the import according to your project structure
 
@@ -10,7 +11,6 @@ class MeetingListPage extends StatefulWidget {
 }
 
 class _MeetingListPageState extends State<MeetingListPage> {
-  late final Store _store;
   late final Box<Meeting> _meetingBox;
   List<Meeting> _meetings = []; // State variable for meetings
 
@@ -21,8 +21,8 @@ class _MeetingListPageState extends State<MeetingListPage> {
   }
 
   Future<void> _initStore() async {
-    _store = await openStore();
-    _meetingBox = _store.box<Meeting>();
+    _meetingBox = (await ObjectBox.instance()).meetingBox;
+    if (!mounted) return;
     _loadMeetings(); // Load meetings from ObjectBox
   }
 
@@ -31,12 +31,6 @@ class _MeetingListPageState extends State<MeetingListPage> {
     setState(() {
       _meetings = meetings;
     });
-  }
-
-  @override
-  void dispose() {
-    _store.close();
-    super.dispose();
   }
 
   @override

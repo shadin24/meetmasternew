@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:signup/animation/animated_content.dart';
 import 'package:signup/common/widgets/common_button.dart';
 import 'package:signup/screens/login.dart';
+import 'package:signup/services/auth_service.dart';
 import 'package:signup/theme/theme.dart';
 import 'package:signup/util/utils.dart';
 
@@ -19,6 +20,7 @@ class _SingUpScreenState extends State<SingUpScreen> {
   final _formKey = GlobalKey<FormState>();
   bool _showPassword = false;
   bool _showConfirmPassword = false;
+  bool _submitting = false;
 
   @override
   void dispose() {
@@ -26,6 +28,34 @@ class _SingUpScreenState extends State<SingUpScreen> {
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
+  }
+
+  Future<void> _createAccount() async {
+    if (!_formKey.currentState!.validate() || _submitting) {
+      return;
+    }
+    setState(() => _submitting = true);
+
+    try {
+      final auth = await AuthService.create();
+      final result = await auth.register(
+        _emailController.text.trim(),
+        _passwordController.text,
+      );
+      if (!mounted) return;
+      if (result == AuthResult.emailAlreadyRegistered) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('An account with this email already exists')),
+        );
+        return;
+      }
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const LoginScreen()),
+      );
+    } finally {
+      if (mounted) setState(() => _submitting = false);
+    }
   }
 
   @override
@@ -83,6 +113,7 @@ class _SingUpScreenState extends State<SingUpScreen> {
                           if (!Utils.isValidEmail(value)) {
                             return 'Enter Valid Email';
                           }
+                          return null;
                         },
                         controller: _emailController,
                         style: const TextStyle(
@@ -131,9 +162,7 @@ class _SingUpScreenState extends State<SingUpScreen> {
                       time: 1000,
                       child: TextFormField(
                         autovalidateMode: AutovalidateMode.onUserInteraction,
-                        validator: (value) => value!.length < 6
-                            ? "Enter valid 6 digit Password"
-                            : null,
+                        validator: (value) => Utils.validatePassword(value),
                         controller: _passwordController,
                         style: const TextStyle(
                           color: Color(0xFF393939),
@@ -204,6 +233,7 @@ class _SingUpScreenState extends State<SingUpScreen> {
                           if (value != _passwordController.text) {
                             return "Password does not match";
                           }
+                          return null;
                         },
                         controller: _confirmPasswordController,
                         obscureText: !_showConfirmPassword,
@@ -269,16 +299,8 @@ class _SingUpScreenState extends State<SingUpScreen> {
                       child: CommonButton(
                         height: 50,
                         width: double.infinity,
-                        label: 'Create account',
-                        onPressed: () {
-                          if (_formKey.currentState!.validate()) {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                  builder: (context) => const LoginScreen()),
-                            );
-                          }
-                        },
+                        label: _submitting ? 'Creating account...' : 'Create account',
+                        onPressed: _submitting ? null : _createAccount,
                       ),
                     ),
                     const SizedBox(

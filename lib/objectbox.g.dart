@@ -15,6 +15,7 @@ import 'package:objectbox/objectbox.dart';
 import 'package:objectbox_flutter_libs/objectbox_flutter_libs.dart';
 
 import 'Meeting.dart';
+import 'user.dart';
 
 export 'package:objectbox/objectbox.dart'; // so that callers only have to import this file
 
@@ -77,6 +78,41 @@ final _entities = <ModelEntity>[
             flags: 0)
       ],
       relations: <ModelRelation>[],
+      backlinks: <ModelBacklink>[]),
+  ModelEntity(
+      id: const IdUid(2, 8498939101972287080),
+      name: 'User',
+      lastPropertyId: const IdUid(5, 831707513577992011),
+      flags: 0,
+      properties: <ModelProperty>[
+        ModelProperty(
+            id: const IdUid(1, 5240936220082212832),
+            name: 'id',
+            type: 6,
+            flags: 1),
+        ModelProperty(
+            id: const IdUid(2, 6260482400965048651),
+            name: 'email',
+            type: 9,
+            flags: 2080,
+            indexId: const IdUid(1, 6671632194912539888)),
+        ModelProperty(
+            id: const IdUid(3, 6169864932503988298),
+            name: 'passwordHash',
+            type: 9,
+            flags: 0),
+        ModelProperty(
+            id: const IdUid(4, 4378269549582588593),
+            name: 'salt',
+            type: 9,
+            flags: 0),
+        ModelProperty(
+            id: const IdUid(5, 831707513577992011),
+            name: 'iterations',
+            type: 6,
+            flags: 0)
+      ],
+      relations: <ModelRelation>[],
       backlinks: <ModelBacklink>[])
 ];
 
@@ -100,8 +136,8 @@ Future<Store> openStore(
 ModelDefinition getObjectBoxModel() {
   final model = ModelInfo(
       entities: _entities,
-      lastEntityId: const IdUid(1, 5329076584521845904),
-      lastIndexId: const IdUid(0, 0),
+      lastEntityId: const IdUid(2, 8498939101972287080),
+      lastIndexId: const IdUid(1, 6671632194912539888),
       lastRelationId: const IdUid(0, 0),
       lastSequenceId: const IdUid(0, 0),
       retiredEntityUids: const [],
@@ -171,6 +207,44 @@ ModelDefinition getObjectBoxModel() {
                 const fb.StringReader(asciiOptimization: true).vTableGet(buffer, rootOffset, 24, '');
 
           return object;
+        }),
+    User: EntityDefinition<User>(
+        model: _entities[1],
+        toOneRelations: (User object) => [],
+        toManyRelations: (User object) => {},
+        getId: (User object) => object.id,
+        setId: (User object, int id) {
+          object.id = id;
+        },
+        objectToFB: (User object, fb.Builder fbb) {
+          final emailOffset = fbb.writeString(object.email);
+          final passwordHashOffset = fbb.writeString(object.passwordHash);
+          final saltOffset = fbb.writeString(object.salt);
+          fbb.startTable(6);
+          fbb.addInt64(0, object.id);
+          fbb.addOffset(1, emailOffset);
+          fbb.addOffset(2, passwordHashOffset);
+          fbb.addOffset(3, saltOffset);
+          fbb.addInt64(4, object.iterations);
+          fbb.finish(fbb.endTable());
+          return object.id;
+        },
+        objectFromFB: (Store store, ByteData fbData) {
+          final buffer = fb.BufferContext(fbData);
+          final rootOffset = buffer.derefObject(0);
+
+          final object = User(
+              email: const fb.StringReader(asciiOptimization: true)
+                  .vTableGet(buffer, rootOffset, 6, ''),
+              passwordHash: const fb.StringReader(asciiOptimization: true)
+                  .vTableGet(buffer, rootOffset, 8, ''),
+              salt: const fb.StringReader(asciiOptimization: true)
+                  .vTableGet(buffer, rootOffset, 10, ''),
+              iterations:
+                  const fb.Int64Reader().vTableGet(buffer, rootOffset, 12, 0))
+            ..id = const fb.Int64Reader().vTableGet(buffer, rootOffset, 4, 0);
+
+          return object;
         })
   };
 
@@ -215,4 +289,24 @@ class Meeting_ {
   /// see [Meeting.participantsSerialized]
   static final participantsSerialized =
       QueryStringProperty<Meeting>(_entities[0].properties[9]);
+}
+
+/// [User] entity fields to define ObjectBox queries.
+class User_ {
+  /// see [User.id]
+  static final id = QueryIntegerProperty<User>(_entities[1].properties[0]);
+
+  /// see [User.email]
+  static final email = QueryStringProperty<User>(_entities[1].properties[1]);
+
+  /// see [User.passwordHash]
+  static final passwordHash =
+      QueryStringProperty<User>(_entities[1].properties[2]);
+
+  /// see [User.salt]
+  static final salt = QueryStringProperty<User>(_entities[1].properties[3]);
+
+  /// see [User.iterations]
+  static final iterations =
+      QueryIntegerProperty<User>(_entities[1].properties[4]);
 }

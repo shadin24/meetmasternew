@@ -3,7 +3,7 @@ import 'package:signup/theme/theme.dart';
 
 class CommonButton extends StatelessWidget {
   final String label;
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
   final double height;
   final double width;
 
@@ -21,9 +21,7 @@ class CommonButton extends StatelessWidget {
         width: width,
         height: height,
         child: ElevatedButton(
-          onPressed: () {
-            onPressed();
-          },
+          onPressed: onPressed,
           style: ElevatedButton.styleFrom(
             backgroundColor: AppTheme.primaryColor,
           ),

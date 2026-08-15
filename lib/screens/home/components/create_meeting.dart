@@ -1,8 +1,9 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:objectbox/objectbox.dart';
 import 'package:signup/theme/theme.dart';
 import 'package:signup/Meeting.dart';
-import 'package:signup/objectbox.g.dart'; // Import the generated code
+import 'package:signup/objectbox_store.dart';
 
 class CreateMeetingPage extends StatefulWidget {
   @override
@@ -25,25 +26,50 @@ class _CreateMeetingPageState extends State<CreateMeetingPage> {
   List<TextEditingController> _participantControllers = [];
   int _participantCount = 1;
 
-  late final Store store;
-  late final Box<Meeting> meetingBox;
+  Box<Meeting>? _meetingBox;
+  String? _storeError;
 
   @override
   void initState() {
     super.initState();
     _addParticipantField();
-    _initStore(); // Initialize ObjectBox
+    _initStore();
   }
 
   @override
   void dispose() {
-    store.close();
+    for (final controller in [
+      _subjectController,
+      _meetingIdController,
+      _locationController,
+      _dateController,
+      _timeController,
+      _categoryController,
+      _participantsCountController,
+      _agendaController,
+      ..._participantControllers,
+    ]) {
+      controller.dispose();
+    }
     super.dispose();
   }
 
   Future<void> _initStore() async {
-    store = await openStore();
-    meetingBox = store.box<Meeting>();
+    try {
+      final box = await ObjectBoxStore.meetingBox();
+      if (!mounted) return;
+      setState(() {
+        _meetingBox = box;
+        _storeError = null;
+      });
+    } catch (error, stackTrace) {
+      debugPrint('Failed to open meeting storage: $error\n$stackTrace');
+      if (!mounted) return;
+      setState(() {
+        _meetingBox = null;
+        _storeError = 'Could not open meeting storage: $error';
+      });
+    }
   }
 
   void _addParticipantField() {
@@ -76,7 +102,9 @@ class _CreateMeetingPageState extends State<CreateMeetingPage> {
         backgroundColor: Colors.white,
         foregroundColor: AppTheme.primaryColor,
       ),
-      body: Padding(
+      body: _storeError != null
+          ? _buildStoreError()
+          : Padding(
         padding: EdgeInsets.all(16.0),
         child: Form(
           key: _formKey,
@@ -94,7 +122,7 @@ class _CreateMeetingPageState extends State<CreateMeetingPage> {
                 _buildTextField(_agendaController, 'Agenda', maxLines: 5),
                 SizedBox(height: 20),
                 ElevatedButton(
-                  onPressed: _submitForm,
+                  onPressed: _meetingBox == null ? null : _submitForm,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppTheme.primaryColor,
                     shape: StadiumBorder(),
@@ -107,6 +135,32 @@ class _CreateMeetingPageState extends State<CreateMeetingPage> {
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStoreError() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              _storeError!,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.red),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () {
+                setState(() => _storeError = null);
+                _initStore();
+              },
+              child: const Text('Retry'),
+            ),
+          ],
         ),
       ),
     );
@@ -271,31 +325,51 @@ class _CreateMeetingPageState extends State<CreateMeetingPage> {
   }
 
   void _submitForm() {
-    if (_formKey.currentState?.validate() ?? false) {
-      // Create a Meeting object with the collected data
-      final meeting = Meeting(
-        subject: _subjectController.text,
-        meetingId: _meetingIdController.text,
-        location: _locationController.text,
-        date: _dateController.text,
-        time: _timeController.text,
-        category: _categoryController.text,
-        participantsCount: _participantControllers.length,
-        agenda: _agendaController.text,
-        participants: _participantControllers.map((c) => c.text).toList(),
-      );
-
-      // Save to ObjectBox
-      meetingBox.put(meeting);
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Meeting Created and Saved')),
-      );
-
-      // Clear the form
-      _formKey.currentState?.reset();
-      _participantControllers.clear();
-      _addParticipantField();
+    if (!(_formKey.currentState?.validate() ?? false)) {
+      return;
     }
+
+    final meetingBox = _meetingBox;
+    if (meetingBox == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(_storeError ?? 'Meeting storage is not ready')),
+      );
+      return;
+    }
+
+    // Create a Meeting object with the collected data
+    final meeting = Meeting(
+      subject: _subjectController.text,
+      meetingId: _meetingIdController.text,
+      location: _locationController.text,
+      date: _dateController.text,
+      time: _timeController.text,
+      category: _categoryController.text,
+      participantsCount: _participantControllers.length,
+      agenda: _agendaController.text,
+      participants: _participantControllers.map((c) => c.text).toList(),
+    );
+
+    try {
+      meetingBox.put(meeting);
+    } catch (error, stackTrace) {
+      debugPrint('Failed to save meeting: $error\n$stackTrace');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not save the meeting: $error')),
+      );
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Meeting Created and Saved')),
+    );
+
+    // Clear the form
+    _formKey.currentState?.reset();
+    for (final controller in _participantControllers) {
+      controller.dispose();
+    }
+    _participantControllers.clear();
+    _addParticipantField();
   }
 }

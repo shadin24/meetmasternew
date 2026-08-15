@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:signup/common/widgets/pill_button.dart';
 import 'package:signup/theme/theme.dart';
 
 // Animated Text Field Widget
@@ -65,16 +66,9 @@ class _AnimatedButtonState extends State<AnimatedButton> {
     return AnimatedContainer(
       duration: Duration(milliseconds: 200),
       curve: Curves.easeInOut,
-      child: ElevatedButton(
+      child: PillButton(
+        label: widget.label,
         onPressed: widget.onPressed,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppTheme.primaryColor,
-          shape: StadiumBorder(),
-        ),
-        child: Text(
-          widget.label,
-          style: TextStyle(color: Colors.white),
-        ),
       ),
     );
   }

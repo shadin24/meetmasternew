@@ -1,11 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:signup/screens/home/components/create_meeting.dart';
-import 'package:signup/screens/home/components/my_meetings.dart';
-import 'package:signup/screens/home/components/search.dart';
-import 'package:signup/screens/home/profile_screen.dart';
 import 'package:signup/screens/login.dart';
 import 'package:signup/theme/theme.dart';
+import 'package:signup/util/navigation.dart';
 import 'dart:async';
 
 
@@ -56,9 +53,7 @@ class _SplashScreenState extends State<SplashScreen> {
     Timer(
       const Duration(seconds: 2), // Duration of the splash screen
           () {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => LoginScreen()),
-        );
+        replaceScreen(context, const LoginScreen());
       },
     );
   }

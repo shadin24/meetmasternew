@@ -83,6 +83,7 @@ class _SingUpScreenState extends State<SingUpScreen> {
                           if (!Utils.isValidEmail(value)) {
                             return 'Enter Valid Email';
                           }
+                          return null;
                         },
                         controller: _emailController,
                         style: const TextStyle(
@@ -204,6 +205,7 @@ class _SingUpScreenState extends State<SingUpScreen> {
                           if (value != _passwordController.text) {
                             return "Password does not match";
                           }
+                          return null;
                         },
                         controller: _confirmPasswordController,
                         obscureText: !_showConfirmPassword,

@@ -74,6 +74,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           if (!Utils.isValidEmail(value)) {
                             return 'Enter Valid Email';
                           }
+                          return null;
                         },
                         controller: _emailController,
                         style: const TextStyle(

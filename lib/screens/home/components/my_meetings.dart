@@ -1,7 +1,9 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart'; // For date formatting
-import 'package:signup/objectbox.g.dart'; // Import the generated code
+import 'package:objectbox/objectbox.dart';
+import 'package:signup/objectbox_store.dart';
 import 'package:signup/theme/theme.dart';
+import 'package:signup/util/utils.dart';
 import '../../../Meeting.dart'; // Adjust the import according to your project structure
 
 class MeetingListPage extends StatefulWidget {
@@ -10,33 +12,38 @@ class MeetingListPage extends StatefulWidget {
 }
 
 class _MeetingListPageState extends State<MeetingListPage> {
-  late final Store _store;
-  late final Box<Meeting> _meetingBox;
+  Box<Meeting>? _meetingBox;
   List<Meeting> _meetings = []; // State variable for meetings
+  bool _loading = true;
+  String? _error;
 
   @override
   void initState() {
     super.initState();
-    _initStore(); // Initialize ObjectBox
-  }
-
-  Future<void> _initStore() async {
-    _store = await openStore();
-    _meetingBox = _store.box<Meeting>();
-    _loadMeetings(); // Load meetings from ObjectBox
+    _loadMeetings();
   }
 
   Future<void> _loadMeetings() async {
-    final meetings = _meetingBox.getAll();
     setState(() {
-      _meetings = meetings;
+      _loading = true;
+      _error = null;
     });
-  }
-
-  @override
-  void dispose() {
-    _store.close();
-    super.dispose();
+    try {
+      final box = _meetingBox ??= await ObjectBoxStore.meetingBox();
+      final meetings = box.getAll();
+      if (!mounted) return;
+      setState(() {
+        _meetings = meetings;
+        _loading = false;
+      });
+    } catch (error, stackTrace) {
+      debugPrint('Failed to load meetings: $error\n$stackTrace');
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _error = 'Could not load meetings: $error';
+      });
+    }
   }
 
   @override
@@ -55,32 +62,54 @@ class _MeetingListPageState extends State<MeetingListPage> {
       ),
       body: Padding(
         padding: EdgeInsets.all(16.0),
-        child: _meetings.isEmpty
-            ? Center(child: CircularProgressIndicator())
-            : ListView.builder(
-          itemCount: _meetings.length,
-          itemBuilder: (context, index) {
-            final meeting = _meetings[index];
-            final date = DateTime.parse(meeting.date); // Convert String to DateTime
-            return Card(
-              margin: EdgeInsets.symmetric(vertical: 8.0),
-              child: ListTile(
-                title: Text(meeting.subject),
-                subtitle: Text(
-                  '${DateFormat('yyyy-MM-dd').format(date)} ${meeting.time}',
-                ),
-                onTap: () => _showMeetingDetails(context, meeting),
-              ),
-            );
-          },
-        ),
+        child: _buildBody(),
       ),
     );
   }
 
-  void _showMeetingDetails(BuildContext context, Meeting meeting) {
-    final date = DateTime.parse(meeting.date); // Convert String to DateTime
+  Widget _buildBody() {
+    if (_loading) {
+      return Center(child: CircularProgressIndicator());
+    }
+    if (_error != null) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              _error!,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.red),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: _loadMeetings,
+              child: const Text('Retry'),
+            ),
+          ],
+        ),
+      );
+    }
+    if (_meetings.isEmpty) {
+      return Center(child: Text('No meetings yet.'));
+    }
+    return ListView.builder(
+      itemCount: _meetings.length,
+      itemBuilder: (context, index) {
+        final meeting = _meetings[index];
+        return Card(
+          margin: EdgeInsets.symmetric(vertical: 8.0),
+          child: ListTile(
+            title: Text(meeting.subject),
+            subtitle: Text('${formatMeetingDate(meeting.date)} ${meeting.time}'),
+            onTap: () => _showMeetingDetails(context, meeting),
+          ),
+        );
+      },
+    );
+  }
 
+  void _showMeetingDetails(BuildContext context, Meeting meeting) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -90,7 +119,7 @@ class _MeetingListPageState extends State<MeetingListPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Date: ${DateFormat('yyyy-MM-dd').format(date)}'),
+                Text('Date: ${formatMeetingDate(meeting.date)}'),
                 Text('Time: ${meeting.time}'),
                 Text('Location: ${meeting.location}'),
                 Text('Category: ${meeting.category}'),

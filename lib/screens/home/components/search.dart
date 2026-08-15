@@ -1,7 +1,11 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart'; // For date formatting
-import 'package:signup/objectbox.g.dart'; // Import the generated ObjectBox code
+import 'package:objectbox/objectbox.dart';
+import 'package:signup/objectbox.g.dart' show Meeting_;
+import 'package:signup/objectbox_store.dart';
 import 'package:signup/theme/theme.dart';
+import 'package:signup/util/utils.dart';
 import '../../../Meeting.dart'; // Adjust the import according to your project structure
 
 class SearchMeetingPage extends StatefulWidget {
@@ -14,24 +18,38 @@ class _SearchMeetingPageState extends State<SearchMeetingPage> {
   final _dateController = TextEditingController();
   DateTime? _selectedDate;
 
-  late final Store _store;
-  late final Box<Meeting> _meetingBox;
+  Box<Meeting>? _meetingBox;
   List<Meeting> _searchResults = []; // State variable for search results
+  bool _searching = false;
+  bool _searched = false;
+  String? _error;
 
   @override
   void initState() {
     super.initState();
-    _initStore(); // Initialize ObjectBox
+    _initStore();
   }
 
   Future<void> _initStore() async {
-    _store = await openStore();
-    _meetingBox = _store.box<Meeting>();
+    try {
+      final box = await ObjectBoxStore.meetingBox();
+      if (!mounted) return;
+      setState(() {
+        _meetingBox = box;
+        _error = null;
+      });
+    } catch (error, stackTrace) {
+      debugPrint('Failed to open meeting storage: $error\n$stackTrace');
+      if (!mounted) return;
+      setState(() {
+        _error = 'Could not open meeting storage: $error';
+      });
+    }
   }
 
   @override
   void dispose() {
-    _store.close();
+    _dateController.dispose();
     super.dispose();
   }
 
@@ -60,7 +78,7 @@ class _SearchMeetingPageState extends State<SearchMeetingPage> {
                   _buildDateField(),
                   SizedBox(height: 20),
                   ElevatedButton(
-                    onPressed: _searchMeetings,
+                    onPressed: _searching ? null : _searchMeetings,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppTheme.primaryColor,
                       shape: StadiumBorder(),
@@ -74,28 +92,46 @@ class _SearchMeetingPageState extends State<SearchMeetingPage> {
               ),
             ),
             SizedBox(height: 20),
-            Expanded(
-              child: _searchResults.isEmpty
-                  ? Center(child: Text('No meetings found.'))
-                  : ListView.builder(
-                itemCount: _searchResults.length,
-                itemBuilder: (context, index) {
-                  final meeting = _searchResults[index];
-                  final date = DateTime.parse(meeting.date); // Convert String to DateTime
-                  return Card(
-                    margin: EdgeInsets.symmetric(vertical: 8.0),
-                    child: ListTile(
-                      title: Text(meeting.subject),
-                      subtitle: Text('${DateFormat('yyyy-MM-dd').format(date)} ${meeting.time}'),
-                      onTap: () => _showMeetingDetails(context, meeting),
-                    ),
-                  );
-                },
-              ),
-            ),
+            Expanded(child: _buildResults()),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildResults() {
+    if (_searching) {
+      return Center(child: CircularProgressIndicator());
+    }
+    if (_error != null) {
+      return Center(
+        child: Text(
+          _error!,
+          textAlign: TextAlign.center,
+          style: const TextStyle(color: Colors.red),
+        ),
+      );
+    }
+    if (_searchResults.isEmpty) {
+      return Center(
+        child: Text(_searched
+            ? 'No meetings found.'
+            : 'Pick a date to search for meetings.'),
+      );
+    }
+    return ListView.builder(
+      itemCount: _searchResults.length,
+      itemBuilder: (context, index) {
+        final meeting = _searchResults[index];
+        return Card(
+          margin: EdgeInsets.symmetric(vertical: 8.0),
+          child: ListTile(
+            title: Text(meeting.subject),
+            subtitle: Text('${formatMeetingDate(meeting.date)} ${meeting.time}'),
+            onTap: () => _showMeetingDetails(context, meeting),
+          ),
+        );
+      },
     );
   }
 
@@ -143,38 +179,48 @@ class _SearchMeetingPageState extends State<SearchMeetingPage> {
   }
 
   Future<void> _searchMeetings() async {
-    if (_searchFormKey.currentState?.validate() ?? false) {
-      final dateStr = _dateController.text;
-      if (dateStr.isNotEmpty) {
-        // Compare only the date part by using equals
-        final searchDate = dateStr;  // Keep the date part only
+    if (!(_searchFormKey.currentState?.validate() ?? false)) {
+      return;
+    }
 
-        // Debugging output
-        print('Searching for meetings on: $searchDate');
+    final searchDate = _dateController.text;
+    if (searchDate.isEmpty) {
+      return;
+    }
 
-        // Query the database for meetings with the exact date
-        final query = _meetingBox.query(
-          Meeting_.date.equals(searchDate),
-        ).build();
+    var box = _meetingBox;
+    setState(() {
+      _searching = true;
+      _error = null;
+    });
 
-        final meetings = query.find();
-
-        print('Found ${meetings.length} meetings'); // Log the number of found meetings
-
-        setState(() {
-          _searchResults = meetings;
-        });
-
-        if (_searchResults.isEmpty) {
-          print('No meetings found for the selected date.');
-        }
-      }
+    Query<Meeting>? query;
+    try {
+      box ??= await ObjectBoxStore.meetingBox();
+      _meetingBox = box;
+      query = box.query(Meeting_.date.equals(searchDate)).build();
+      final meetings = query.find();
+      if (!mounted) return;
+      setState(() {
+        _searchResults = meetings;
+        _searching = false;
+        _searched = true;
+      });
+    } catch (error, stackTrace) {
+      debugPrint('Meeting search failed: $error\n$stackTrace');
+      if (!mounted) return;
+      setState(() {
+        _searchResults = [];
+        _searching = false;
+        _searched = true;
+        _error = 'Search failed: $error';
+      });
+    } finally {
+      query?.close();
     }
   }
 
   void _showMeetingDetails(BuildContext context, Meeting meeting) {
-    final date = DateTime.parse(meeting.date); // Convert String to DateTime
-
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -184,7 +230,7 @@ class _SearchMeetingPageState extends State<SearchMeetingPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Date: ${DateFormat('yyyy-MM-dd').format(date)}'),
+                Text('Date: ${formatMeetingDate(meeting.date)}'),
                 Text('Time: ${meeting.time}'),
                 Text('Location: ${meeting.location}'),
                 Text('Category: ${meeting.category}'),

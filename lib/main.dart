@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:signup/screens/home/components/create_meeting.dart';
@@ -10,9 +11,27 @@ import 'dart:async';
 
 
 void main() {
-  WidgetsFlutterBinding.ensureInitialized();
-  SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
-  runApp(const MyApp());
+  runZonedGuarded(() async {
+    WidgetsFlutterBinding.ensureInitialized();
+
+    FlutterError.onError = (details) {
+      FlutterError.presentError(details);
+      debugPrint('Uncaught framework error: ${details.exception}\n${details.stack}');
+    };
+
+    try {
+      await SystemChrome.setPreferredOrientations(
+        [DeviceOrientation.portraitUp],
+      );
+    } catch (error, stackTrace) {
+      // A device refusing the orientation lock must not stop the app.
+      debugPrint('Could not lock orientation: $error\n$stackTrace');
+    }
+
+    runApp(const MyApp());
+  }, (error, stackTrace) {
+    debugPrint('Uncaught error: $error\n$stackTrace');
+  });
 }
 
 class MyApp extends StatelessWidget {
@@ -46,16 +65,25 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen> {
+  Timer? _navigationTimer;
+
   @override
   void initState() {
     super.initState();
     _navigateToLoginScreen();
   }
 
+  @override
+  void dispose() {
+    _navigationTimer?.cancel();
+    super.dispose();
+  }
+
   void _navigateToLoginScreen() {
-    Timer(
+    _navigationTimer = Timer(
       const Duration(seconds: 2), // Duration of the splash screen
           () {
+        if (!mounted) return;
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (context) => LoginScreen()),
         );

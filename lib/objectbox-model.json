@@ -61,10 +61,46 @@
         }
       ],
       "relations": []
+    },
+    {
+      "id": "2:8498939101972287080",
+      "lastPropertyId": "5:831707513577992011",
+      "name": "User",
+      "properties": [
+        {
+          "id": "1:5240936220082212832",
+          "name": "id",
+          "type": 6,
+          "flags": 1
+        },
+        {
+          "id": "2:6260482400965048651",
+          "name": "email",
+          "type": 9,
+          "flags": 2080,
+          "indexId": "1:6671632194912539888"
+        },
+        {
+          "id": "3:6169864932503988298",
+          "name": "passwordHash",
+          "type": 9
+        },
+        {
+          "id": "4:4378269549582588593",
+          "name": "salt",
+          "type": 9
+        },
+        {
+          "id": "5:831707513577992011",
+          "name": "iterations",
+          "type": 6
+        }
+      ],
+      "relations": []
     }
   ],
-  "lastEntityId": "1:5329076584521845904",
-  "lastIndexId": "0:0",
+  "lastEntityId": "2:8498939101972287080",
+  "lastIndexId": "1:6671632194912539888",
   "lastRelationId": "0:0",
   "lastSequenceId": "0:0",
   "modelVersion": 5,

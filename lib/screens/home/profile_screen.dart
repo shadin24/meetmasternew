@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:signup/animation/animated_content.dart';
+import 'package:signup/common/widgets/app_bar.dart';
 import 'package:signup/screens/home/components/profile_menu_widget.dart';
 import 'package:signup/screens/home/components/create_meeting.dart'; // Import CreateMeetingPage
 import 'package:signup/screens/home/components/my_meetings.dart'; // Import MeetingListPage
 import 'package:signup/screens/home/components/search.dart'; // Import SearchMeetingPage
 import 'package:signup/theme/theme.dart';
+import 'package:signup/util/navigation.dart';
 import '../login.dart';
 
 class ProfileScreen extends StatelessWidget {
@@ -15,23 +17,18 @@ class ProfileScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
+      appBar: AppScreenAppBar(
         elevation: 0,
-        title: AnimatedContent(
+        titleWidget: const AnimatedContent(
           show: true,
           leftToRight: -1.0,
           topToBottom: 0.0,
           time: 1500,
           child: Text(
             'HOME',
-            style: TextStyle(
-              fontWeight: FontWeight.bold, // Make the font bold
-              color: AppTheme.primaryColor, // Ensure the text color matches the foreground color
-            ),
+            style: AppScreenAppBar.titleStyle,
           ),
         ),
-        backgroundColor: Colors.white,
-        foregroundColor: AppTheme.primaryColor,
         actions: [
           // Logout button in the AppBar
           AnimatedContent(
@@ -40,14 +37,7 @@ class ProfileScreen extends StatelessWidget {
             topToBottom: 0.0,
             time: 1500,
             child: GestureDetector(
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => LoginScreen(),
-                  ),
-                );
-              },
+              onTap: () => pushScreen(context, const LoginScreen()),
               child: Container(
                 padding: EdgeInsets.symmetric(horizontal: 16),
                 child: Row(
@@ -124,52 +114,25 @@ class ProfileScreen extends StatelessWidget {
                     ProfileMenuWidget(
                       title: "Create Meetings",
                       icon: Icons.add,
-                      onPress: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => CreateMeetingPage(),
-                          ),
-                        );
-                      },
+                      onPress: () =>
+                          pushScreen(context, CreateMeetingPage()),
                     ),
                     ProfileMenuWidget(
                       title: "My Meetings",
                       icon: Icons.calendar_today,
-                      onPress: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => MeetingListPage(),
-                          ),
-                        );
-                      },
+                      onPress: () => pushScreen(context, MeetingListPage()),
                     ),
                     ProfileMenuWidget(
                       title: "Search Meetings",
                       icon: Icons.search,
-                      onPress: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => SearchMeetingPage(),
-                          ),
-                        );
-                      },
+                      onPress: () => pushScreen(context, SearchMeetingPage()),
                     ),
                     ProfileMenuWidget(
                       title: "Logout",
                       icon: Icons.power_settings_new,
                       textColor: Colors.red,
                       endIcon: false,
-                      onPress: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => LoginScreen(),
-                          ),
-                        );
-                      },
+                      onPress: () => pushScreen(context, const LoginScreen()),
                     ),
                   ],
                 ),

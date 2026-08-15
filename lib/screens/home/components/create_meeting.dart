@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:objectbox/objectbox.dart';
-import 'package:signup/theme/theme.dart';
 import 'package:signup/Meeting.dart';
-import 'package:signup/objectbox.g.dart'; // Import the generated code
+import 'package:signup/common/widgets/app_bar.dart';
+import 'package:signup/common/widgets/app_text_field.dart';
+import 'package:signup/common/widgets/pill_button.dart';
+import 'package:signup/util/date_time_utils.dart';
+import 'package:signup/util/meeting_store.dart';
+import 'package:signup/util/validators.dart';
 
 class CreateMeetingPage extends StatefulWidget {
   @override
@@ -22,34 +25,26 @@ class _CreateMeetingPageState extends State<CreateMeetingPage> {
 
   DateTime? _selectedDate;
   TimeOfDay? _selectedTime;
-  List<TextEditingController> _participantControllers = [];
-  int _participantCount = 1;
+  final List<TextEditingController> _participantControllers = [];
 
-  late final Store store;
-  late final Box<Meeting> meetingBox;
+  final MeetingStore _meetingStore = MeetingStore();
 
   @override
   void initState() {
     super.initState();
     _addParticipantField();
-    _initStore(); // Initialize ObjectBox
+    _meetingStore.open(); // Initialize ObjectBox
   }
 
   @override
   void dispose() {
-    store.close();
+    _meetingStore.close();
     super.dispose();
-  }
-
-  Future<void> _initStore() async {
-    store = await openStore();
-    meetingBox = store.box<Meeting>();
   }
 
   void _addParticipantField() {
     setState(() {
       _participantControllers.add(TextEditingController());
-      _participantCount = _participantControllers.length;
     });
   }
 
@@ -57,7 +52,6 @@ class _CreateMeetingPageState extends State<CreateMeetingPage> {
     setState(() {
       if (_participantControllers.length > 1) {
         _participantControllers.removeAt(index);
-        _participantCount = _participantControllers.length;
       }
     });
   }
@@ -65,19 +59,9 @@ class _CreateMeetingPageState extends State<CreateMeetingPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          'Create Meeting',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: AppTheme.primaryColor,
-          ),
-        ),
-        backgroundColor: Colors.white,
-        foregroundColor: AppTheme.primaryColor,
-      ),
+      appBar: const AppScreenAppBar(title: 'Create Meeting'),
       body: Padding(
-        padding: EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(16.0),
         child: Form(
           key: _formKey,
           child: SingleChildScrollView(
@@ -89,21 +73,12 @@ class _CreateMeetingPageState extends State<CreateMeetingPage> {
                 _buildDateField(),
                 _buildTimeField(),
                 _buildTextField(_categoryController, 'Category'),
-                _buildTextField(_participantsCountController, 'No. of Participants'),
+                _buildTextField(
+                    _participantsCountController, 'No. of Participants'),
                 _buildParticipantsFields(),
                 _buildTextField(_agendaController, 'Agenda', maxLines: 5),
-                SizedBox(height: 20),
-                ElevatedButton(
-                  onPressed: _submitForm,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.primaryColor,
-                    shape: StadiumBorder(),
-                  ),
-                  child: Text(
-                    'Submit',
-                    style: TextStyle(color: Colors.white),
-                  ),
-                ),
+                const SizedBox(height: 20),
+                PillButton(label: 'Submit', onPressed: _submitForm),
               ],
             ),
           ),
@@ -112,117 +87,60 @@ class _CreateMeetingPageState extends State<CreateMeetingPage> {
     );
   }
 
-  Widget _buildTextField(TextEditingController controller, String label, {int maxLines = 1}) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: TextFormField(
-        controller: controller,
-        decoration: InputDecoration(
-          labelText: label,
-          border: OutlineInputBorder(),
-          focusedBorder: OutlineInputBorder(
-            borderSide: BorderSide(color: AppTheme.primaryColor),
-          ),
-        ),
-        maxLines: maxLines,
-        validator: (value) {
-          if (value == null || value.isEmpty) {
-            return 'Please enter $label';
-          }
-          return null;
-        },
-      ),
+  Widget _buildTextField(TextEditingController controller, String label,
+      {int maxLines = 1}) {
+    return AppTextField(
+      controller: controller,
+      label: label,
+      maxLines: maxLines,
+      validator: (value) => Validators.required(value, label),
     );
   }
 
   Widget _buildDateField() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: TextFormField(
-        controller: _dateController,
-        decoration: InputDecoration(
-          labelText: 'Date',
-          border: OutlineInputBorder(),
-          focusedBorder: OutlineInputBorder(
-            borderSide: BorderSide(color: AppTheme.primaryColor),
-          ),
-          suffixIcon: IconButton(
-            icon: Icon(Icons.calendar_today),
-            onPressed: _selectDate,
-          ),
-        ),
-        readOnly: true,
-        validator: (value) {
-          if (value == null || value.isEmpty) {
-            return 'Please select a date';
-          }
-          return null;
-        },
+    return AppTextField(
+      controller: _dateController,
+      label: 'Date',
+      readOnly: true,
+      validator: (value) => Validators.selection(value, 'date'),
+      suffixIcon: IconButton(
+        icon: const Icon(Icons.calendar_today),
+        onPressed: _selectDate,
       ),
     );
   }
 
   Future<void> _selectDate() async {
-    final DateTime? pickedDate = await showDatePicker(
-      context: context,
-      initialDate: _selectedDate ?? DateTime.now(),
-      firstDate: DateTime(2000),
-      lastDate: DateTime(2101),
-    );
+    final DateTime? pickedDate = await pickDate(context, _selectedDate);
 
     if (pickedDate != null && pickedDate != _selectedDate) {
       setState(() {
         _selectedDate = pickedDate;
-        _dateController.text = "${pickedDate.toLocal()}".split(' ')[0];
+        _dateController.text = formatDate(pickedDate);
       });
     }
   }
 
   Widget _buildTimeField() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: TextFormField(
-        controller: _timeController,
-        decoration: InputDecoration(
-          labelText: 'Time',
-          border: OutlineInputBorder(),
-          focusedBorder: OutlineInputBorder(
-            borderSide: BorderSide(color: AppTheme.primaryColor),
-          ),
-          suffixIcon: IconButton(
-            icon: Icon(Icons.access_time),
-            onPressed: _selectTime,
-          ),
-        ),
-        readOnly: true,
-        validator: (value) {
-          if (value == null || value.isEmpty) {
-            return 'Please select a time';
-          }
-          return null;
-        },
+    return AppTextField(
+      controller: _timeController,
+      label: 'Time',
+      readOnly: true,
+      validator: (value) => Validators.selection(value, 'time'),
+      suffixIcon: IconButton(
+        icon: const Icon(Icons.access_time),
+        onPressed: _selectTime,
       ),
     );
   }
 
   Future<void> _selectTime() async {
-    final TimeOfDay? pickedTime = await showTimePicker(
-      context: context,
-      initialTime: _selectedTime ?? TimeOfDay.now(),
-    );
+    final TimeOfDay? pickedTime = await pickTime(context, _selectedTime);
 
     if (pickedTime != null && pickedTime != _selectedTime) {
       setState(() {
         _selectedTime = pickedTime;
-        final now = DateTime.now();
-        final timeOfDay = DateTime(
-          now.year,
-          now.month,
-          now.day,
-          pickedTime.hour,
-          pickedTime.minute,
-        );
-        _timeController.text = "${timeOfDay.hour.toString().padLeft(2, '0')}:${timeOfDay.minute.toString().padLeft(2, '0')}";
+        _timeController.text = formatTimeOfDay(pickedTime);
       });
     }
   }
@@ -231,40 +149,27 @@ class _CreateMeetingPageState extends State<CreateMeetingPage> {
     return Column(
       children: [
         for (int i = 0; i < _participantControllers.length; i++)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8.0),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextFormField(
-                    controller: _participantControllers[i],
-                    decoration: InputDecoration(
-                      labelText: 'Participant ${i + 1}',
-                      border: OutlineInputBorder(),
-                      focusedBorder: OutlineInputBorder(
-                        borderSide: BorderSide(color: AppTheme.primaryColor),
-                      ),
-                    ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter a name';
-                      }
-                      return null;
-                    },
-                  ),
+          Row(
+            children: [
+              Expanded(
+                child: AppTextField(
+                  controller: _participantControllers[i],
+                  label: 'Participant ${i + 1}',
+                  validator: (value) =>
+                      value == null || value.isEmpty ? 'Please enter a name' : null,
                 ),
-                if (_participantControllers.length > 1)
-                  IconButton(
-                    icon: Icon(Icons.remove_circle, color: Colors.red),
-                    onPressed: () => _removeParticipantField(i),
-                  ),
-                if (_participantControllers.length == i + 1)
-                  IconButton(
-                    icon: Icon(Icons.add_circle, color: Colors.green),
-                    onPressed: _addParticipantField,
-                  ),
-              ],
-            ),
+              ),
+              if (_participantControllers.length > 1)
+                IconButton(
+                  icon: const Icon(Icons.remove_circle, color: Colors.red),
+                  onPressed: () => _removeParticipantField(i),
+                ),
+              if (_participantControllers.length == i + 1)
+                IconButton(
+                  icon: const Icon(Icons.add_circle, color: Colors.green),
+                  onPressed: _addParticipantField,
+                ),
+            ],
           ),
       ],
     );
@@ -286,10 +191,10 @@ class _CreateMeetingPageState extends State<CreateMeetingPage> {
       );
 
       // Save to ObjectBox
-      meetingBox.put(meeting);
+      _meetingStore.box.put(meeting);
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Meeting Created and Saved')),
+        const SnackBar(content: Text('Meeting Created and Saved')),
       );
 
       // Clear the form

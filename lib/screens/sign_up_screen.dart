@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:signup/animation/animated_content.dart';
+import 'package:signup/common/widgets/auth_prompt_row.dart';
+import 'package:signup/common/widgets/auth_text_field.dart';
 import 'package:signup/common/widgets/common_button.dart';
 import 'package:signup/screens/login.dart';
 import 'package:signup/theme/theme.dart';
-import 'package:signup/util/utils.dart';
+import 'package:signup/util/navigation.dart';
+import 'package:signup/util/validators.dart';
 
 class SingUpScreen extends StatefulWidget {
   const SingUpScreen({super.key});
@@ -45,7 +48,6 @@ class _SingUpScreenState extends State<SingUpScreen> {
                   padding: const EdgeInsets.only(top: 0),
                   child: Image.asset(
                     "assets/images/search_scan.png",
-
                   ),
                 ),
               ),
@@ -60,11 +62,7 @@ class _SingUpScreenState extends State<SingUpScreen> {
                   children: [
                     const Text(
                       'Sign up',
-                      style: TextStyle(
-                        color: AppTheme.primaryColor,
-                        fontSize: 27,
-                        fontWeight: FontWeight.w500,
-                      ),
+                      style: AppTheme.headingStyle,
                     ),
                     const SizedBox(
                       height: 40,
@@ -74,51 +72,10 @@ class _SingUpScreenState extends State<SingUpScreen> {
                       leftToRight: 0.0,
                       topToBottom: -1.0,
                       time: 1000,
-                      child: TextFormField(
-                        autovalidateMode: AutovalidateMode.onUserInteraction,
-                        validator: (value) {
-                          if (value!.isEmpty) {
-                            return "Enter Email";
-                          }
-                          if (!Utils.isValidEmail(value)) {
-                            return 'Enter Valid Email';
-                          }
-                        },
+                      child: AuthTextField(
                         controller: _emailController,
-                        style: const TextStyle(
-                          color: AppTheme.primaryTextColor,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w400,
-                        ),
-                        decoration: const InputDecoration(
-                          labelText: 'Email',
-                          labelStyle: TextStyle(
-                            color: Color(0xFF755DC1),
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                          ),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.all(Radius.circular(10)),
-                            borderSide: BorderSide(
-                              width: 1,
-                              color: Color(0xFF837E93),
-                            ),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.all(Radius.circular(10)),
-                            borderSide: BorderSide(
-                              width: 1,
-                              color: Color(0xFF837E93),
-                            ),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.all(Radius.circular(10)),
-                            borderSide: BorderSide(
-                              width: 1,
-                              color: Color(0xFF9F7BFF),
-                            ),
-                          ),
-                        ),
+                        label: 'Email',
+                        validator: Validators.email,
                       ),
                     ),
                     const SizedBox(
@@ -129,62 +86,17 @@ class _SingUpScreenState extends State<SingUpScreen> {
                       leftToRight: 0.0,
                       topToBottom: -3.0,
                       time: 1000,
-                      child: TextFormField(
-                        autovalidateMode: AutovalidateMode.onUserInteraction,
-                        validator: (value) => value!.length < 6
-                            ? "Enter valid 6 digit Password"
-                            : null,
+                      child: AuthTextField(
                         controller: _passwordController,
-                        style: const TextStyle(
-                          color: Color(0xFF393939),
-                          fontSize: 13,
-                          fontWeight: FontWeight.w400,
-                        ),
+                        label: 'Password',
+                        hintText: 'Create Password',
+                        validator: Validators.password,
                         obscureText: !_showPassword,
-                        decoration: InputDecoration(
-                          suffixIcon: InkWell(
-                              onTap: () {
-                                setState(() {
-                                  _showPassword = !_showPassword;
-                                });
-                              },
-                              child: Icon(_showPassword
-                                  ? Icons.visibility
-                                  : Icons.visibility_off)),
-                          labelText: 'Password',
-                          hintText: 'Create Password',
-                          hintStyle: TextStyle(
-                            color: Color(0xFF837E93),
-                            fontSize: 10,
-                            fontWeight: FontWeight.w400,
-                          ),
-                          labelStyle: TextStyle(
-                            color: Color(0xFF755DC1),
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.all(Radius.circular(10)),
-                            borderSide: BorderSide(
-                              width: 1,
-                              color: Color(0xFF837E93),
-                            ),
-                          ),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.all(Radius.circular(10)),
-                            borderSide: BorderSide(
-                              width: 1,
-                              color: Color(0xFF837E93),
-                            ),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.all(Radius.circular(10)),
-                            borderSide: BorderSide(
-                              width: 1,
-                              color: Color(0xFF9F7BFF),
-                            ),
-                          ),
-                        ),
+                        onToggleObscure: () {
+                          setState(() {
+                            _showPassword = !_showPassword;
+                          });
+                        },
                       ),
                     ),
                     const SizedBox(
@@ -195,67 +107,20 @@ class _SingUpScreenState extends State<SingUpScreen> {
                       leftToRight: 0.0,
                       topToBottom: 3.0,
                       time: 1200,
-                      child: TextFormField(
-                        autovalidateMode: AutovalidateMode.onUserInteraction,
-                        validator: (value) {
-                          if (value!.isEmpty) {
-                            return "Enter Password";
-                          }
-                          if (value != _passwordController.text) {
-                            return "Password does not match";
-                          }
-                        },
+                      child: AuthTextField(
                         controller: _confirmPasswordController,
+                        label: 'Confirm Password',
+                        hintText: 'Confirm Password',
+                        validator: (value) => Validators.confirmPassword(
+                          value,
+                          _passwordController.text,
+                        ),
                         obscureText: !_showConfirmPassword,
-                        style: const TextStyle(
-                          color: Color(0xFF393939),
-                          fontSize: 13,
-                          fontWeight: FontWeight.w400,
-                        ),
-                        decoration: InputDecoration(
-                          suffixIcon: InkWell(
-                              onTap: () {
-                                setState(() {
-                                  _showConfirmPassword = !_showConfirmPassword;
-                                });
-                              },
-                              child: Icon(_showConfirmPassword
-                                  ? Icons.visibility
-                                  : Icons.visibility_off)),
-                          labelText: 'Confirm Password',
-                          hintText: 'Confirm Password',
-                          hintStyle: TextStyle(
-                            color: Color(0xFF837E93),
-                            fontSize: 10,
-                            fontWeight: FontWeight.w400,
-                          ),
-                          labelStyle: TextStyle(
-                            color: Color(0xFF755DC1),
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                          ),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.all(Radius.circular(10)),
-                            borderSide: BorderSide(
-                              width: 1,
-                              color: Color(0xFF837E93),
-                            ),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.all(Radius.circular(10)),
-                            borderSide: BorderSide(
-                              width: 1,
-                              color: Color(0xFF837E93),
-                            ),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.all(Radius.circular(10)),
-                            borderSide: BorderSide(
-                              width: 1,
-                              color: Color(0xFF9F7BFF),
-                            ),
-                          ),
-                        ),
+                        onToggleObscure: () {
+                          setState(() {
+                            _showConfirmPassword = !_showConfirmPassword;
+                          });
+                        },
                       ),
                     ),
                     const SizedBox(
@@ -272,11 +137,7 @@ class _SingUpScreenState extends State<SingUpScreen> {
                         label: 'Create account',
                         onPressed: () {
                           if (_formKey.currentState!.validate()) {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                  builder: (context) => const LoginScreen()),
-                            );
+                            pushScreen(context, const LoginScreen());
                           }
                         },
                       ),
@@ -284,37 +145,11 @@ class _SingUpScreenState extends State<SingUpScreen> {
                     const SizedBox(
                       height: 15,
                     ),
-                    Row(
-                      children: [
-                        const Text(
-                          ' have an account?',
-                          style: TextStyle(
-                            color: Color(0xFF837E93),
-                            fontSize: 13,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        const SizedBox(
-                          width: 2.5,
-                        ),
-                        InkWell(
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                  builder: (context) => const LoginScreen()),
-                            );
-                          },
-                          child: const Text(
-                            'Log In ',
-                            style: TextStyle(
-                              color: Color(0xFF755DC1),
-                              fontSize: 13,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                      ],
+                    AuthPromptRow(
+                      question: ' have an account?',
+                      actionLabel: 'Log In ',
+                      onActionTap: () =>
+                          pushScreen(context, const LoginScreen()),
                     ),
                   ],
                 ),

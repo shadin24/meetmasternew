@@ -1,30 +1,48 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
 import 'package:signup/main.dart';
+import 'package:signup/screens/login.dart';
+import 'package:signup/theme/theme.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
+  // The splash screen schedules a navigation timer that has to run before the
+  // test finishes, otherwise the framework reports a pending timer.
+  Future<void> settleSplashTimer(WidgetTester tester) async {
+    await tester.pump(const Duration(seconds: 2));
+    await tester.pumpAndSettle();
+  }
+
+  testWidgets('MyApp shows the splash screen first', (tester) async {
     await tester.pumpWidget(const MyApp());
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    expect(find.byType(SplashScreen), findsOneWidget);
+    expect(find.text('Meet Master'), findsOneWidget);
+    expect(find.byType(LoginScreen), findsNothing);
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+    await settleSplashTimer(tester);
+  });
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+  testWidgets('MyApp configures the app theme', (tester) async {
+    await tester.pumpWidget(const MyApp());
+
+    final app = tester.widget<MaterialApp>(find.byType(MaterialApp));
+    expect(app.title, 'Meet Master');
+    expect(app.debugShowCheckedModeBanner, isFalse);
+    expect(app.theme?.primaryColor, AppTheme.primaryColor);
+    expect(app.theme?.colorScheme.primary, AppTheme.primaryColor);
+    expect(app.theme?.colorScheme.secondary, AppTheme.secondaryColor);
+    expect(app.theme?.iconTheme.color, AppTheme.primaryTextColor);
+
+    await settleSplashTimer(tester);
+  });
+
+  testWidgets('the splash screen hands over to the login screen',
+      (tester) async {
+    await tester.pumpWidget(const MyApp());
+
+    await settleSplashTimer(tester);
+
+    expect(find.byType(LoginScreen), findsOneWidget);
+    expect(find.byType(SplashScreen), findsNothing);
   });
 }
